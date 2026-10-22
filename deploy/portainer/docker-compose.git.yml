@@ -1,0 +1,68 @@
+# Stack Portainer QR CODE AKP untuk metode "Repository" (Git). TANPA rahasia: nilai ${...} diisi di Portainer > Environment variables.
+# Buat isiannya dengan: powershell -ExecutionPolicy Bypass -File deploy\portainer\buat-isian-qr.ps1
+# Yang WAJIB diisi hanya 3: DB_PASSWORD, APP_KEY, PORTAL_SSO_SECRET (dari Portal > Modul > QR Code AKP > Integrasi).
+# Stack ini BARU dan terpisah dari stack lain di server (nama stack, volume, dan port berbeda).
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-3312}:3306"      # untuk DBeaver lewat SSH tunnel (hanya localhost server)
+    environment:
+      MARIADB_DATABASE: akp_qr_akp
+      MARIADB_USER: qr
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-${DB_PASSWORD}}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  qr:
+    image: ghcr.io/eddyyucca/akp-qr:${QR_TAG:-latest}
+    pull_policy: always                 # selalu tarik image terbaru dari ghcr (Re-pull image di Portainer CE tidak tersedia)
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${QR_PORT:-8110}:80"
+    environment:
+      APP_NAME: "QR Code AKP"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${QR_URL:-https://qr.lameruru.web.id}
+      APP_TIMEZONE: Asia/Makassar
+      APP_LOCALE: id
+      APP_FALLBACK_LOCALE: id
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: warning
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: akp_qr_akp
+      DB_USERNAME: qr
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_DRIVER: file
+      SESSION_COOKIE: akp_qr_akp_session
+      SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-true}
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      PORTAL_URL: ${PORTAL_URL:-https://portal.lameruru.web.id}
+      PORTAL_APP_CODE: ${PORTAL_APP_CODE:-qr-akp}   # harus sama dengan KODE modul di Portal
+      PORTAL_SSO_SECRET: ${PORTAL_SSO_SECRET}
+      AUTO_MIGRATE: "true"
+    volumes:
+      - qr_storage:/var/www/html/storage
+
+volumes:
+  dbdata:
+    name: akp_qr_dbdata
+  qr_storage:
+    name: akp_qr_storage

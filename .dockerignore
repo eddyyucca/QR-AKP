@@ -1,0 +1,26 @@
+# Konteks build = folder repositori ini. Jangan masukkan rahasia, dependensi lokal, atau data.
+.env
+.env.*
+!.env.example
+vendor
+node_modules
+public/hot
+public/build
+public/storage
+.git
+.github
+.idea
+.vscode
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*.php
+tests
+**/*.sqlite
+**/*.log
+**/*.sql
+deploy
+docker-compose*.yml
+*.zip
+.phpunit.result.cache
